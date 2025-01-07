@@ -3,17 +3,25 @@ import numpy as np
 import soundfile as sf
 import whisper
 import os
+from scipy.signal import butter, filtfilt
 
-def preprocess_audio(file_path, target_sr=16000):
+def high_pass_filter(data, cutoff, fs, order=5):
+    nyquist = 0.5 * fs
+    normal_cutoff = cutoff / nyquist
+    b, a = butter(order, normal_cutoff, btype='high', analog=False)
+    y = filtfilt(b, a, data)
+    return y
+
+def preprocess_audio(file_path):
     # 音声ファイルの読み込み
     audio, sr = librosa.load(file_path, sr=None)
-    
+    target_sr = 16000
     # サンプリングレートの調整
     if sr != target_sr:
-        audio = librosa.resample(audio, sr, target_sr)
+        audio = librosa.resample(audio, orig_sr=sr, target_sr=target_sr)
     
     # ノイズ除去（簡易的なハイパスフィルタ）
-    audio = librosa.effects.high_pass_filter(audio, cutoff=100)
+    audio = high_pass_filter(audio, cutoff=100, fs=target_sr)
     
     # 音量の正規化
     audio = librosa.util.normalize(audio)
